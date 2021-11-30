@@ -165,23 +165,6 @@ const setVideoCodec = () => {
   return ['-c:v', 'libx264']
 }
 
-const setResolution = (video) => {
-  // 有些编码器要求帧的尺寸是指定数字的整数倍，比如 x264 编码要求是 16 的整数倍
-  // 如果原始视频的尺寸不满足要求，则编码器会将其补足/pad 到满足要求的尺寸
-  // 并将原始尺寸保存为 coded_width/coded_height
-  // 解码器在解码时，就可以根据所保存的根据原始尺寸和实际尺寸进行裁切/crop
-  // What's the difference between coded width and width in FFprobe
-  // https://superuser.com/a/1523946/432588
-  const { Width: videoWidth, Height: videoHeight } = video
-
-  // 让视频高度不要超过 720
-  const videoHeightLimit = 720
-  const targetHeight = Math.min(videoHeight, videoHeightLimit)
-  // 设置 FFmpeg 维持视频分辨率比例
-  // https://ottverse.com/change-resolution-resize-scale-video-using-ffmpeg/
-  return ['-vf', `scale=-1:${targetHeight}`]
-}
-
 const setVideoBitRate = (video) => {
   // FFmpeg 获取不到比特率的情况
   // Determine video bitrate using ffmpeg
@@ -321,8 +304,6 @@ function setFormatArgs(videoInfo) {
   const audioBitrate = setAudioBitRate(videoInfo.audioStream)
   // 设置视频编码为 X264
   const videoCodec = setVideoCodec()
-  // 设置视频分辨率，高度不超过 720
-  // const resolution = setResolution(video)
   // 根据视频分辨率设置合理码率
   const videoBitRate = setVideoBitRate(videoInfo.videoStream)
   // 设置压缩质量
