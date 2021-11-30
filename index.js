@@ -3,7 +3,7 @@ import path from 'path'
 import fs from 'fs'
 import readline from 'readline'
 
-import { log, throwError } from './utils.js'
+import { log, throwError, clearLine } from './utils.js'
 import * as paths from './paths.js'
 
 const geInputPath = async () => {
@@ -40,24 +40,6 @@ const geInputPath = async () => {
   }
 
   return line.value
-}
-
-async function getVideoListOld(inPath) {
-  const videoFileNames = throughDirectory(inPath)
-  log(videoFileNames)
-
-  const buildVideoObject = (fileName) => {
-    return {
-      base: fileName,
-      full: path.join(inPath, fileName),
-    }
-  }
-  const videoList = {
-    dir: inPath,
-    videos: videoFileNames.map(buildVideoObject),
-  }
-
-  return videoList
 }
 
 // node js get all files in directory recursively
@@ -137,6 +119,24 @@ const getVideoInfo = (videoPath) => {
   }
 
   return [videoStream, audioStream]
+}
+
+const getVideoInfos = async (videoList) => {
+  const videoInfos = []
+  let index = 0
+
+  for (const video of videoList) {
+    index && clearLine()
+    log(`正在读取第${++index}个视频的信息`)
+    const [videoStream, audioStream] = await getVideoInfo(video)
+    videoInfos.push({
+      path: video,
+      videoStream,
+      audioStream,
+    })
+  }
+
+  return videoInfos
 }
 
 const setGlobalOptions = () => {
