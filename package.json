@@ -1,0 +1,9 @@
+{
+  "name": "Media-Format",
+  "version": "1.0.0",
+  "description": "Format audio and video files with FFmpeg.",
+  "main": "index.js",
+  "type": "module",
+  "author": "He Wei",
+  "license": "MIT"
+}
