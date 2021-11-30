@@ -76,28 +76,6 @@ async function getVideoList(inPath) {
   return throughDirectory(inPath)
 }
 
-const countStreamOld = (filePath, type) => {
-  // 统计视频中有多少条视频流、音频流
-  // https://superuser.com/questions/1381642/ffprobe-count-video-and-audio-streams-tracks
-  const args = [
-    // 只输出错误级别的日志，用户自己要输出的信息仍可正常输出
-    '-v', 'error',
-    // 只选择视频流或音频流，参数值为 'v' 和 'a'
-    '-select_streams', type,
-    // 输出 stream 段中的 index 信息
-    // https://ffmpeg.org/ffprobe.html#Main-options
-    '-show_entries', 'stream=index',
-    // 用默认格式输出，不输出section header 和 footer
-    // 也不输出 key，只输出值，以便统计
-    // https://ffmpeg.org/ffprobe.html#toc-default
-    '-of', 'default=nw=1:nk=1',
-    filePath.full,
-  ]
-
-  const result = spawnSync(paths.ffprobe, args)
-  return result.stdout.toString().split(/\r\n|\r|\n/).length - 1
-}
-
 const countStream = (filePath, type) => {
   const countTarget = type === 'v' ? 'VideoCount' : 'AudioCount'
 
