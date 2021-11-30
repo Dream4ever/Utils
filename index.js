@@ -295,7 +295,7 @@ function setFormatArgs(videoInfo) {
   // 设置全局参数
   const globalOptions = setGlobalOptions()
   // 设置输入文件
-  const inputVideo = ['-i', videoInfo.full]
+  const inputVideo = ['-i', videoInfo.path]
   // 设置音频编码为 AAC
   const audioCodec = setAudioCodec()
   // 设置音频采样率不超过 44100
@@ -317,7 +317,7 @@ function setFormatArgs(videoInfo) {
   // 设置 HLS 参数
   const hls = setHls()
   // 设置输出路径
-  const outputDirectory = setOutputDirectory(videoInfo.base)
+  const outputDirectory = setOutputDirectory(path.win32.basename(videoInfo.path))
 
   return [
     ...globalOptions,
@@ -326,7 +326,6 @@ function setFormatArgs(videoInfo) {
     ...audioSampleRate,
     ...audioBitrate,
     ...videoCodec,
-    // ...resolution,
     ...videoBitRate,
     ...quality,
     ...frameRate,
@@ -370,28 +369,23 @@ const formatVideo = (args) => {
   })
 }
 
+const formatVideos = async (videoInfos) => {
+  for (let i = 0; i < videoInfos.length; i++) {
+    const args = setFormatArgs(videoInfos[i])
+    await formatVideo(args)
+      .catch((err) => {
+        throwError(err)
+      })
+  }
+}
+
 async function main() {
   try {
     log('请输入待处理视频所在文件夹的完整路径，用单引号包裹，输入后回车确认：')    
     const inPath = await geInputPath()
     const videoList = await getVideoList(inPath)
-    // log(videoList, videoList.length)
-    const result = getVideoInfo(videoList[0])
-    log(result)
-
-    throwError('end')
-
-    for (let i = 0; i < videoList.videos.length; i++) {
-      [videoList.videos[i].videoStream, videoList.videos[i].audioStream] = await getVideoInfo(videoList.videos[i])
-    }
-    for (let i = 0; i < videoList.videos.length; i++) {
-      [videoList.videos[i].videoStream, videoList.videos[i].audioStream] = await getVideoInfo(videoList.videos[i])
-      const args = setFormatArgs(videoList.videos[i])
-      await formatVideo(args)
-        .catch((err) => {
-          throwError(err)
-        })
-    }
+    const videoInfos = await getVideoInfos(videoList)
+    formatVideos(videoInfos)
   } catch (error) {
     log(error)
   }
