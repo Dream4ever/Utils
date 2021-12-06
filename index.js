@@ -158,7 +158,7 @@ const setAudioSampleRate = (audio) => {
 }
 
 const setAudioBitRate = (audio) => {
-  return ['-b:a', `${Math.min(Math.floor(audio.BitRate / 1E3), 128) * 1E3}`]
+  return ['-b:a', `${Math.min(Math.floor((audio.BitRate || 128000) / 1E3), 128) * 1E3}`]
 }
 
 const setVideoCodec = () => {
