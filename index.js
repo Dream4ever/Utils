@@ -3,7 +3,7 @@ import path from 'path'
 import fs from 'fs'
 import readline from 'readline'
 
-import { log, throwError, clearLine } from './utils.js'
+import { log, throwError, clearLine, isVideoOrAudio } from './utils.js'
 import * as paths from './paths.js'
 
 const geInputPath = async () => {
@@ -54,7 +54,7 @@ const throughDirectory = (Directory) => {
   return files
 }
 
-async function getVideoList(inPath) {
+async function getMediaList(inPath) {
   return throughDirectory(inPath)
 }
 
@@ -71,25 +71,28 @@ const countStream = (filePath, type) => {
   return +result.stdout.toString().split(/\r\n|\r|\n/)[0]
 }
 
-const checkStreamsCount = (filePath) => {
-  const videoStreamCount = countStream(filePath, 'v')
-  if (videoStreamCount !== 1) {
-    log(filePath)
-    throwError(`该视频有${videoStreamCount}条视频流，请完善代码`)
-  }
-
+const checkStreamsCount = (filePath, mediaTypeIndex) => {
   const audioStreamCount = countStream(filePath, 'a')
   if (audioStreamCount !== 1) {
     log(filePath)
     throwError(`该视频有${audioStreamCount}条音频流，请完善代码`)
   }
+
+  // 音频文件不需要检查视频流数量
+  if (mediaTypeIndex === 2) return;
+  
+  const videoStreamCount = countStream(filePath, 'v')
+  if (videoStreamCount !== 1) {
+    log(filePath)
+    throwError(`该视频有${videoStreamCount}条视频流，请完善代码`)
+  }
 }
 
-const buildVideoProbeArgs = (videoPath) => {
+const buildMediaProbeArgs = (mediaPath) => {
   return [
     '--Inform=General',
     '--Output=JSON',
-    videoPath,
+    mediaPath,
   ]
   // return [
   //   // 加上下面这个选项，输出信息就在 stdout 里，否则就在 stderr 里
@@ -101,42 +104,54 @@ const buildVideoProbeArgs = (videoPath) => {
   // ]
 }
 
-const getVideoInfo = (videoPath) => {
-  // 确保视频中的视频流和音频流都只有一条，否则就报错
-  checkStreamsCount(videoPath)
+const getMediaInfo = (media, mediaTypeIndex) => {
+  // 确保媒体文件中的视频流和音频流都只有一条，否则就报错
+  checkStreamsCount(media, mediaTypeIndex)
 
-  const videoArgs = buildVideoProbeArgs(videoPath)
+  const mediaArgs = buildMediaProbeArgs(media)
 
-  const result = spawnSync(paths.MediaInfo, videoArgs)
+  const result = spawnSync(paths.MediaInfo, mediaArgs)
   const tracks = JSON.parse(result.stdout.toString()).media.track
   
-  const videoStream = tracks.find(track => track['@type'] === 'Video')
   const audioStream = tracks.find(track => track['@type'] === 'Audio')
 
-  if (!videoStream.Height || !videoStream.FrameRate || !videoStream.BitRate) {
-    log(videoStream)
-    throwError(`文件${videoPath.base}的视频流信息不完整，请解决`, '\n\n')
+  let videoStream = null
+  if (mediaTypeIndex === 1) {
+    videoStream = tracks.find(track => track['@type'] === 'Video')
+
+    if (!videoStream.Height || !videoStream.FrameRate || !videoStream.BitRate) {
+      log(videoStream)
+      throwError(`文件${media.base}的视频流信息不完整，请解决`, '\n\n')
+    }
   }
 
   return [videoStream, audioStream]
 }
 
-const getVideoInfos = async (videoList) => {
-  const videoInfos = []
+const getMediaInfos = async (mediaList) => {
+  const mediaInfos = []
   let index = 0
 
-  for (const video of videoList) {
+  for (const media of mediaList) {
+    const mediaTypes = ['未知类型', '视频', '音频']
+    const mediaTypeIndex = isVideoOrAudio(media)
+
+    if (!mediaTypeIndex) {
+      throwError(`文件 ${media.split('\\').pop()} 的类型为${mediaTypes[mediaTypeIndex]}`)
+    }
+
     index && clearLine()
-    log(`正在读取第${++index}个视频的信息`)
-    const [videoStream, audioStream] = await getVideoInfo(video)
-    videoInfos.push({
-      path: video,
+    log(`正在读取第${++index}个媒体文件的信息`)
+
+    const [videoStream, audioStream] = await getMediaInfo(media, mediaTypeIndex)
+    mediaInfos.push({
+      path: media,
       videoStream,
       audioStream,
     })
   }
 
-  return videoInfos
+  return mediaInfos
 }
 
 const setGlobalOptions = () => {
@@ -291,49 +306,50 @@ const setOutputDirectory = (folder) => {
   return [path.join(paths.outPath, folder.toString(), 'video.m3u8')]
 }
 
-function setFormatArgs(videoInfo) {
+function setFormatArgs(mediaInfo) {
+  const args = []
+
   // 设置全局参数
   const globalOptions = setGlobalOptions()
   // 设置输入文件
-  const inputVideo = ['-i', videoInfo.path]
+  const inputFile = ['-i', mediaInfo.path]
+
+  args.push(...globalOptions, ...inputFile)
+
   // 设置音频编码为 AAC
   const audioCodec = setAudioCodec()
   // 设置音频采样率不超过 44100
-  const audioSampleRate = setAudioSampleRate(videoInfo.audioStream)
+  const audioSampleRate = setAudioSampleRate(mediaInfo.audioStream)
   // 设置音频码率不超过 128k
-  const audioBitrate = setAudioBitRate(videoInfo.audioStream)
-  // 设置视频编码为 X264
-  const videoCodec = setVideoCodec()
-  // 根据视频分辨率设置合理码率
-  const videoBitRate = setVideoBitRate(videoInfo.videoStream)
-  // 设置压缩质量
-  const quality = setQuality()
-  // 设置视频合理帧率
-  const frameRate = setFrameRate(videoInfo.videoStream)
-  // 设置关键帧间隔
-  const keyFrame = setKeyFrames(frameRate[1])
+  const audioBitrate = setAudioBitRate(mediaInfo.audioStream)
+
+  args.push(...audioCodec, ...audioSampleRate, ...audioBitrate)
+
+  if (mediaInfo.videoStream) {
+    // 设置视频编码为 X264
+    const videoCodec = setVideoCodec()
+    // 根据视频分辨率设置合理码率
+    const videoBitRate = setVideoBitRate(mediaInfo.videoStream)
+    // 设置视频压缩质量
+    const quality = setQuality()
+    // 设置视频合理帧率
+    const frameRate = setFrameRate(mediaInfo.videoStream)
+    // 设置视频关键帧间隔
+    const keyFrame = setKeyFrames(frameRate[1])
+
+    args.push(...videoCodec, ...videoBitRate, ...quality, ...frameRate, ...keyFrame)
+  }
+
   // 设置其他选项
   const misc = setMiscs()
   // 设置 HLS 参数
   const hls = setHls()
   // 设置输出路径
-  const outputDirectory = setOutputDirectory(path.win32.basename(videoInfo.path))
+  const outputDirectory = setOutputDirectory(path.win32.basename(mediaInfo.path))
 
-  return [
-    ...globalOptions,
-    ...inputVideo,
-    ...audioCodec,
-    ...audioSampleRate,
-    ...audioBitrate,
-    ...videoCodec,
-    ...videoBitRate,
-    ...quality,
-    ...frameRate,
-    ...keyFrame,
-    ...misc,
-    ...hls,
-    ...outputDirectory,
-  ]
+  args.push(...misc, ...hls, ...outputDirectory)
+
+  return args
 }
 
 const tryCreateFolder = (value) => {
@@ -347,7 +363,7 @@ const tryCreateFolder = (value) => {
 // node.js async spawn in loop
 // https://stackoverflow.com/questions/22337446/how-to-wait-for-a-child-process-to-finish-in-node-js
 // https://www.reddit.com/r/node/comments/avaap3/i_want_to_spawn_processes_in_a_for_loop_but_i/
-const formatVideo = (args) => {
+const formatMedia = (args) => {
   tryCreateFolder(args[args.length - 1])
 
   return new Promise((resolve, reject) => {
@@ -369,10 +385,10 @@ const formatVideo = (args) => {
   })
 }
 
-const formatVideos = async (videoInfos) => {
-  for (let i = 0; i < videoInfos.length; i++) {
-    const args = setFormatArgs(videoInfos[i])
-    await formatVideo(args)
+const formatMedias = async (mediaInfos) => {
+  for (let i = 0; i < mediaInfos.length; i++) {
+    const args = setFormatArgs(mediaInfos[i])
+    await formatMedia(args)
       .catch((err) => {
         throwError(err)
       })
@@ -383,9 +399,9 @@ async function main() {
   try {
     log('请输入待处理视频所在文件夹的完整路径，用单引号包裹，输入后回车确认：')    
     const inPath = await geInputPath()
-    const videoList = await getVideoList(inPath)
-    const videoInfos = await getVideoInfos(videoList)
-    formatVideos(videoInfos)
+    const mediaList = await getMediaList(inPath)
+    const mediaInfos = await getMediaInfos(mediaList)
+    formatMedias(mediaInfos)
   } catch (error) {
     log(error)
   }
