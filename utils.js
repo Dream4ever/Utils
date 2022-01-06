@@ -24,7 +24,7 @@ const isVideoOrAudio = (file) => {
     'm4a',
     'mp3',
   ]
-  const ext = file.split('.').pop()
+  const ext = file.split('.').pop().toLowerCase()
   if (videoExts.includes(ext)) return 1
   if (audioExts.includes(ext)) return 2
   return 0
