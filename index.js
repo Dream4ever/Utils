@@ -196,10 +196,13 @@ const setVideoBitRate = (video) => {
   // https://trac.ffmpeg.org/wiki/EncodingForStreamingSites
 
   // 考虑到分辨率的不同，不宜设定一个固定值
-  // 720P 及以上视频码率设置为 1600
-  // 480P 及以上设置为 1800，更低的设置为 500
-  const videoBitRateLimit = video.Height >= 720 ? 1600 : (
-    video.Height >= 480 ? 800 : 500
+  // 720P 及以上视频码率设置为不超过 1600
+  // 480P 及以上设置为不超过 800，更低的设置为不超过 500
+  const videoBitRateLimit = video.Height >= 720 ?
+    Math.min(video.BitRate, 1600) : (
+      video.Height >= 480 ?
+        Math.min(video.BitRate, 800) :
+        Math.min(video.BitRate, 500)
   )
 
   // 原始码率除以一万后取整，再把结果加上 00k，就是以 k 为单位的码率，可用于 bitrate 和 maxrate
