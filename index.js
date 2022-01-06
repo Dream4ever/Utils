@@ -303,7 +303,7 @@ const setHls = () => {
 }
 
 const setOutputDirectory = (folder) => {
-  return [path.join(paths.outPath, folder.toString(), 'video.m3u8')]
+  return [path.join(paths.outPath, folder.toString(), 'media.m3u8')]
 }
 
 function setFormatArgs(mediaInfo) {
@@ -397,7 +397,7 @@ const formatMedias = async (mediaInfos) => {
 
 async function main() {
   try {
-    log('请输入待处理视频所在文件夹的完整路径，用单引号包裹，输入后回车确认：')    
+    log('请输入待处理文件所在文件夹的完整路径，用单引号包裹，输入后回车确认：')    
     const inPath = await geInputPath()
     const mediaList = await getMediaList(inPath)
     const mediaInfos = await getMediaInfos(mediaList)
