@@ -323,14 +323,16 @@ function setFormatArgs(mediaInfo) {
 
   args.push(...globalOptions, ...inputFile)
 
-  // 设置音频编码为 AAC
-  const audioCodec = setAudioCodec()
-  // 设置音频采样率不超过 44100
-  const audioSampleRate = setAudioSampleRate(mediaInfo.audioStream)
-  // 设置音频码率不超过 128k
-  const audioBitrate = setAudioBitRate(mediaInfo.audioStream)
+  if (mediaInfo.audioStream) {
+    // 设置音频编码为 AAC
+    const audioCodec = setAudioCodec()
+    // 设置音频采样率不超过 44100
+    const audioSampleRate = setAudioSampleRate(mediaInfo.audioStream)
+    // 设置音频码率不超过 128k
+    const audioBitrate = setAudioBitRate(mediaInfo.audioStream)
 
-  args.push(...audioCodec, ...audioSampleRate, ...audioBitrate)
+    args.push(...audioCodec, ...audioSampleRate, ...audioBitrate)
+  }
 
   if (mediaInfo.videoStream) {
     // 设置视频编码为 X264
