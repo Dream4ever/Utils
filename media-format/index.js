@@ -173,6 +173,10 @@ const setAudioSampleRate = (audio) => {
 }
 
 const setAudioBitRate = (audio) => {
+  // 有部分音视频的码率格式为 64000 / 64000
+  if (audio.BitRate.includes(' / ')) {
+    audio.BitRate = audio.BitRate.split(' / ')[0]
+  }
   return ['-b:a', `${Math.min(Math.floor((audio.BitRate || 128000) / 1E3), 128) * 1E3}`]
 }
 
