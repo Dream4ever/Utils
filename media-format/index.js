@@ -75,7 +75,7 @@ const checkStreamsCount = (filePath, mediaTypeIndex) => {
   const audioStreamCount = countStream(filePath, 'a')
   if (audioStreamCount !== 1) {
     log(filePath)
-    throwError(`该视频有${audioStreamCount}条音频流，请完善代码`)
+    log(`该视频有${audioStreamCount}条音频流，请完善代码`)
   }
 
   // 音频文件不需要检查视频流数量
@@ -174,7 +174,9 @@ const setAudioSampleRate = (audio) => {
 
 const setAudioBitRate = (audio) => {
   // 有部分音视频的码率格式为 64000 / 64000
-  if (audio.BitRate.includes(' / ')) {
+  if (audio.BitRate_Nominal) {
+    audio.BitRate = audio.BitRate_Nominal
+  } else if (audio.BitRate.includes(' / ')) {
     audio.BitRate = audio.BitRate.split(' / ')[0]
   }
   return ['-b:a', `${Math.min(Math.floor((audio.BitRate || 128000) / 1E3), 128) * 1E3}`]
