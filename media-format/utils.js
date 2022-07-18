@@ -18,11 +18,13 @@ const isVideoOrAudio = (file) => {
     'ts',
     'vob',
     'wmv',
+    'mov',
   ]
   const audioExts = [
-    'flac',
-    'm4a',
     'mp3',
+    'wav',
+    'm4a',
+    'flac',
   ]
   const ext = file.split('.').pop().toLowerCase()
   if (videoExts.includes(ext)) return 1
