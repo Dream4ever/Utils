@@ -11,6 +11,7 @@ const clearLine = () => {
 const isVideoOrAudio = (file) => {
   const videoExts = [
     'asf',
+    'avi',
     'flv',
     'mp4',
     'mpeg',

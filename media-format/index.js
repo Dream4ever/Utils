@@ -235,6 +235,7 @@ const setQuality = () => {
   // https://blog.csdn.net/achang21/article/details/77824485
   return [
     '-profile:v', 'main',
+    '-pix_fmt', 'yuv420p',
     '-preset', 'medium',
   ]
 }
